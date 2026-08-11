@@ -14,6 +14,7 @@ def test_check_url(monkeypatch):
     assert result["url"] == "https://example.com"
     assert result["status"] == 200
 
+
 def test_check_url_returns_unhealthy_status(monkeypatch):
     mock_response = Mock()
     mock_response.status_code = 503
