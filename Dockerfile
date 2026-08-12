@@ -21,6 +21,8 @@ ENV PATH="/app/.venv/bin:$PATH" \
 
 WORKDIR /app
 
+RUN python -m pip uninstall --yes pip
+
 COPY --from=builder /app/.venv /app/.venv
 COPY main.py ./
 
