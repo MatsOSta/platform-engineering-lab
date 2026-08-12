@@ -1,0 +1,12 @@
+# OpenTofu working directory and local state
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# Saved plans and crash logs
+*.tfplan
+crash.log
+crash.*.log
+
+# Dependency selections are reproducibility metadata, not working data.
+!.terraform.lock.hcl
