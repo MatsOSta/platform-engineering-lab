@@ -1,18 +1,33 @@
 terraform {
   required_version = ">= 1.11, < 2.0"
+
+  required_providers {
+    github = {
+      source  = "integrations/github"
+      version = "~> 6.13.0"
+    }
+  }
 }
 
-variable "service_name" {
-  description = "Name used to identify this service in future infrastructure."
-  type        = string
-  default     = "service-health"
+provider "github" {
+  owner = "MatsOSta"
 }
 
-locals {
-  foundation_message = "OpenTofu foundation for ${var.service_name}"
-}
+resource "github_branch_protection" "master" {
+  repository_id  = "platform-engineering-lab"
+  pattern        = "master"
+  enforce_admins = false
 
-output "foundation_message" {
-  description = "Confirms that OpenTofu can evaluate this provider-free module."
-  value       = local.foundation_message
+  required_status_checks {
+    strict = true
+    contexts = [
+      "checks",
+      "container-scan",
+      "opentofu-validation",
+    ]
+  }
+
+  required_pull_request_reviews {
+    required_approving_review_count = 0
+  }
 }

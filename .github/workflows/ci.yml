@@ -61,9 +61,6 @@ jobs:
       - name: Validate OpenTofu configuration
         run: tofu validate
 
-      - name: Plan OpenTofu changes
-        run: tofu plan -input=false -no-color
-
   container-scan:
     needs: checks
     runs-on: ubuntu-latest
