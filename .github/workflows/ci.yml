@@ -34,3 +34,42 @@ jobs:
 
       - name: Test
         run: uv run python -m pytest
+
+  container-scan:
+    needs: checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build runtime image
+        run: docker build --tag service-health:${{ github.sha }} .
+
+      - name: Report HIGH and CRITICAL vulnerabilities
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
+        with:
+          image-ref: service-health:${{ github.sha }}
+          version: v0.73.0
+          scanners: vuln
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: 0
+
+      - name: Block fixable HIGH and CRITICAL vulnerabilities
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
+        env:
+          TRIVY_EXIT_ON_EOL: 1
+        with:
+          image-ref: service-health:${{ github.sha }}
+          version: v0.73.0
+          skip-setup-trivy: true
+          cache: false
+          scanners: vuln
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: 1
