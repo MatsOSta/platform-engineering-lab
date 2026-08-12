@@ -1,8 +1,14 @@
-# OpenTofu foundation
+# OpenTofu repository governance
 
-This provider-free root module is a learning and CI foundation. It evaluates a
-service name and output without provisioning infrastructure or requiring
-credentials.
+This root module manages the minimum branch-protection policy for this
+repository. It protects `master`, requires pull requests without requiring an
+approval in this single-developer repository, and requires the existing GitHub
+Actions checks to pass before merge.
+
+The GitHub provider reads authentication from runtime configuration. Set
+`GITHUB_TOKEN` to a token with repository administration permission before
+planning or applying. Do not store the token in this directory or in OpenTofu
+variables.
 
 Run from this directory:
 
@@ -10,8 +16,8 @@ Run from this directory:
 tofu init
 tofu fmt -check
 tofu validate
-tofu plan
+GITHUB_TOKEN="..." tofu plan
 ```
 
-Add providers, remote state, modules, and resources only when the repository
-has a concrete infrastructure target.
+Review every plan carefully. Applying this module changes the repository's
+merge and push policy; it does not create application infrastructure.
