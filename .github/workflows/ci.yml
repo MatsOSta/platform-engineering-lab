@@ -34,3 +34,100 @@ jobs:
 
       - name: Test
         run: uv run python -m pytest
+
+  container-scan:
+    needs: checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build runtime image
+        run: docker build --tag service-health:${{ github.sha }} .
+
+      - name: Generate CycloneDX SBOM
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
+        with:
+          image-ref: service-health:${{ github.sha }}
+          version: v0.73.0
+          scanners: vuln
+          format: cyclonedx
+          output: service-health.cdx.json
+
+      - name: Record and verify runtime components
+        run: |
+          python_version="$(docker run --rm --entrypoint python service-health:${{ github.sha }} --version | awk '{print $2}')"
+          python_ref="pkg:generic/python@${python_version}"
+
+          jq --arg version "${python_version}" --arg ref "${python_ref}" '
+            .components += [{
+              "bom-ref": $ref,
+              "type": "framework",
+              "name": "Python",
+              "version": $version,
+              "purl": $ref,
+              "properties": [{
+                "name": "service-health:source",
+                "value": "runtime interpreter"
+              }]
+            }]
+            | .dependencies += [{"ref": $ref, "dependsOn": []}]
+          ' service-health.cdx.json > service-health.cdx.tmp.json
+          mv service-health.cdx.tmp.json service-health.cdx.json
+
+          jq -e --arg version "${python_version}" '
+            .bomFormat == "CycloneDX"
+            and any(.components[]; .name == "Python" and .version == $version)
+            and any(.components[]; .name == "httpx")
+            and any(.components[]; .name == "httpcore")
+            and any(.components[]; .name == "anyio")
+            and any(.components[]; .name == "certifi")
+            and any(.components[]; .name == "h11")
+            and any(.components[]; .name == "idna")
+            and any(.components[]; any(.properties[]?;
+              .name == "aquasecurity:trivy:PkgType" and .value == "debian"))
+          ' service-health.cdx.json
+
+      - name: Explain CPython vulnerability coverage
+        run: |
+          echo "::notice title=CPython coverage limitation::The SBOM inventories CPython, but the interpreter under /usr/local is not covered by the Trivy vulnerability gate. Review SECURITY.md and Python security advisories before merge."
+
+      - name: Report HIGH and CRITICAL vulnerabilities
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
+        with:
+          image-ref: service-health:${{ github.sha }}
+          version: v0.73.0
+          skip-setup-trivy: true
+          cache: false
+          scanners: vuln
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: 0
+
+      - name: Block fixable HIGH and CRITICAL vulnerabilities
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
+        env:
+          TRIVY_EXIT_ON_EOL: 1
+        with:
+          image-ref: service-health:${{ github.sha }}
+          version: v0.73.0
+          skip-setup-trivy: true
+          cache: false
+          scanners: vuln
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: 1
+
+      - name: Upload CycloneDX SBOM
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: service-health-sbom-${{ github.sha }}
+          path: service-health.cdx.json
+          if-no-files-found: error
+          retention-days: 7
