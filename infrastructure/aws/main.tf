@@ -16,6 +16,10 @@ provider "aws" {
 
 data "aws_caller_identity" "current" {}
 
+data "aws_availability_zones" "available" {
+  state = "available"
+}
+
 resource "aws_vpc" "platform_lab" {
   cidr_block           = "10.42.0.0/16"
   enable_dns_support   = true
@@ -27,6 +31,66 @@ resource "aws_vpc" "platform_lab" {
     Project     = "platform-engineering-lab"
     Environment = "lab"
     ManagedBy   = "OpenTofu"
+  }
+}
+
+resource "aws_subnet" "edge_a" {
+  vpc_id                  = aws_vpc.platform_lab.id
+  cidr_block              = "10.42.0.0/24"
+  availability_zone       = data.aws_availability_zones.available.names[0]
+  map_public_ip_on_launch = false
+
+  tags = {
+    Name        = "platform-engineering-lab-edge-a"
+    Project     = "platform-engineering-lab"
+    Environment = "lab"
+    ManagedBy   = "OpenTofu"
+    Tier        = "edge"
+  }
+}
+
+resource "aws_subnet" "edge_b" {
+  vpc_id                  = aws_vpc.platform_lab.id
+  cidr_block              = "10.42.1.0/24"
+  availability_zone       = data.aws_availability_zones.available.names[1]
+  map_public_ip_on_launch = false
+
+  tags = {
+    Name        = "platform-engineering-lab-edge-b"
+    Project     = "platform-engineering-lab"
+    Environment = "lab"
+    ManagedBy   = "OpenTofu"
+    Tier        = "edge"
+  }
+}
+
+resource "aws_subnet" "workload_a" {
+  vpc_id                  = aws_vpc.platform_lab.id
+  cidr_block              = "10.42.10.0/24"
+  availability_zone       = data.aws_availability_zones.available.names[0]
+  map_public_ip_on_launch = false
+
+  tags = {
+    Name        = "platform-engineering-lab-workload-a"
+    Project     = "platform-engineering-lab"
+    Environment = "lab"
+    ManagedBy   = "OpenTofu"
+    Tier        = "workload"
+  }
+}
+
+resource "aws_subnet" "workload_b" {
+  vpc_id                  = aws_vpc.platform_lab.id
+  cidr_block              = "10.42.11.0/24"
+  availability_zone       = data.aws_availability_zones.available.names[1]
+  map_public_ip_on_launch = false
+
+  tags = {
+    Name        = "platform-engineering-lab-workload-b"
+    Project     = "platform-engineering-lab"
+    Environment = "lab"
+    ManagedBy   = "OpenTofu"
+    Tier        = "workload"
   }
 }
 

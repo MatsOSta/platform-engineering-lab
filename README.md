@@ -85,3 +85,41 @@ uv run ruff format --check .
 ```
 
 Tests mock HTTP requests and do not require live network access.
+
+Desired goals:
+
+Developer
+    │
+    ▼
+GitHub
+    │
+    ├── CI
+    │   ├── tests
+    │   ├── lint
+    │   ├── security scan
+    │   ├── SBOM
+    │   └── IaC validation/plan
+    │
+    ▼
+Container Registry
+    │
+    ▼
+GitOps
+    │
+    ▼
+AWS
+┌─────────────────────────────────┐
+│ VPC                             │
+│                                 │
+│  ┌─────────┐    ┌─────────┐    │
+│  │  AZ A   │    │  AZ B   │    │
+│  │         │    │         │    │
+│  │ EKS     │    │ EKS     │    │
+│  │ nodes   │    │ nodes   │    │
+│  └─────────┘    └─────────┘    │
+│                                 │
+│ IAM / Secrets / DNS / Logging   │
+└─────────────────────────────────┘
+        │
+        ▼
+Observability
