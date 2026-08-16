@@ -118,6 +118,23 @@ resource "aws_route_table" "workload" {
   }
 }
 
+resource "aws_internet_gateway" "platform_lab" {
+  vpc_id = aws_vpc.platform_lab.id
+
+  tags = {
+    Name        = "platform-engineering-lab"
+    Project     = "platform-engineering-lab"
+    Environment = "lab"
+    ManagedBy   = "OpenTofu"
+  }
+}
+
+resource "aws_route" "edge_default_ipv4" {
+  route_table_id         = aws_route_table.edge.id
+  destination_cidr_block = "0.0.0.0/0"
+  gateway_id             = aws_internet_gateway.platform_lab.id
+}
+
 resource "aws_route_table_association" "edge_a" {
   subnet_id      = aws_subnet.edge_a.id
   route_table_id = aws_route_table.edge.id
