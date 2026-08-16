@@ -94,6 +94,50 @@ resource "aws_subnet" "workload_b" {
   }
 }
 
+resource "aws_route_table" "edge" {
+  vpc_id = aws_vpc.platform_lab.id
+
+  tags = {
+    Name        = "platform-engineering-lab-edge"
+    Project     = "platform-engineering-lab"
+    Environment = "lab"
+    ManagedBy   = "OpenTofu"
+    Tier        = "edge"
+  }
+}
+
+resource "aws_route_table" "workload" {
+  vpc_id = aws_vpc.platform_lab.id
+
+  tags = {
+    Name        = "platform-engineering-lab-workload"
+    Project     = "platform-engineering-lab"
+    Environment = "lab"
+    ManagedBy   = "OpenTofu"
+    Tier        = "workload"
+  }
+}
+
+resource "aws_route_table_association" "edge_a" {
+  subnet_id      = aws_subnet.edge_a.id
+  route_table_id = aws_route_table.edge.id
+}
+
+resource "aws_route_table_association" "edge_b" {
+  subnet_id      = aws_subnet.edge_b.id
+  route_table_id = aws_route_table.edge.id
+}
+
+resource "aws_route_table_association" "workload_a" {
+  subnet_id      = aws_subnet.workload_a.id
+  route_table_id = aws_route_table.workload.id
+}
+
+resource "aws_route_table_association" "workload_b" {
+  subnet_id      = aws_subnet.workload_b.id
+  route_table_id = aws_route_table.workload.id
+}
+
 output "aws_account_id" {
   description = "AWS account ID for the authenticated caller."
   value       = data.aws_caller_identity.current.account_id
