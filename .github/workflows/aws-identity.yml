@@ -1,0 +1,24 @@
+name: AWS Identity
+
+on:
+  push:
+    branches:
+      - master
+
+permissions:
+  id-token: write
+
+jobs:
+  identity:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6.2.3
+        with:
+          role-to-assume: arn:aws:iam::450895596262:role/platform-engineering-lab-github-identity
+          aws-region: eu-north-1
+          allowed-account-ids: "450895596262"
+
+      - name: Verify AWS identity
+        run: aws sts get-caller-identity
