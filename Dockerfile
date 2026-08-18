@@ -21,7 +21,10 @@ ENV PATH="/app/.venv/bin:$PATH" \
 
 WORKDIR /app
 
-RUN python -m pip uninstall --yes pip
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get upgrade --yes \
+    && rm -rf /var/lib/apt/lists/* \
+    && python -m pip uninstall --yes pip
 
 COPY --from=builder /app/.venv /app/.venv
 COPY main.py ./
