@@ -37,7 +37,7 @@ data "aws_iam_policy_document" "github_actions_trust" {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
       values = [
-        "repo:MatsOSta/platform-engineering-lab:ref:refs/heads/master",
+        "repo:MatsOSta@112391018/platform-engineering-lab@1329830113:ref:refs/heads/master",
       ]
     }
   }
