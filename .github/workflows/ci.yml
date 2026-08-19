@@ -89,7 +89,7 @@ jobs:
           scan-ref: infrastructure/
           version: v0.73.0
           severity: HIGH,CRITICAL
-          exit-code: 0
+          exit-code: 1
 
   container-scan:
     needs: checks
