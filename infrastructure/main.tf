@@ -24,6 +24,7 @@ resource "github_branch_protection" "master" {
     contexts = [
       "checks",
       "container-scan",
+      "iac-security",
       "opentofu-validation",
     ]
   }
