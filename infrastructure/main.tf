@@ -26,6 +26,7 @@ resource "github_branch_protection" "master" {
       "container-scan",
       "iac-security",
       "opentofu-validation",
+      "policy-as-code",
     ]
   }
 

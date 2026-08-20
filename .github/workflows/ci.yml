@@ -35,6 +35,33 @@ jobs:
       - name: Test
         run: uv run python -m pytest
 
+  policy-as-code:
+    runs-on: ubuntu-latest
+    env:
+      CONFTEST_IMAGE: docker.io/openpolicyagent/conftest@sha256:b451f93ec386c25a4ed5aa4b835605dd4aee693374b619f5dc92374afcb6c296 # v0.68.2
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Verify Rego unit tests
+        run: |
+          docker run --rm \
+            --volume "$PWD:/project" \
+            --workdir /project \
+            "${CONFTEST_IMAGE}" \
+            verify --policy policy/terraform
+
+      - name: Enforce policy against AWS Terraform
+        run: |
+          docker run --rm \
+            --volume "$PWD:/project" \
+            --workdir /project \
+            "${CONFTEST_IMAGE}" \
+            test --policy policy/terraform --parser hcl2 infrastructure/aws/*.tf
+
   opentofu-validation:
     runs-on: ubuntu-latest
     defaults:
