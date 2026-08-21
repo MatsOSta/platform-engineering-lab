@@ -23,35 +23,133 @@ jobs:
       - name: Verify AWS identity
         run: aws sts get-caller-identity
 
-      - name: Verify lab VPC read access
+      - name: Verify lab network topology
         run: |
-          vpc_count="$(aws ec2 describe-vpcs \
+          fail() {
+            echo "$1" >&2
+            exit 1
+          }
+
+          mapfile -t vpcs < <(aws ec2 describe-vpcs \
             --region eu-north-1 \
             --filters Name=tag:Project,Values=platform-engineering-lab \
-            --query 'length(Vpcs)' \
-            --output text)"
+            --query 'Vpcs[].[VpcId,CidrBlock]' \
+            --output text)
 
-          if [[ ! "${vpc_count}" =~ ^[0-9]+$ ]] || (( vpc_count < 1 )); then
-            echo "Expected at least one visible platform-engineering-lab VPC; found ${vpc_count}." >&2
-            exit 1
-          fi
+          [[ ${#vpcs[@]} -eq 1 ]] || fail "Expected exactly one project VPC; found ${#vpcs[@]}."
+          read -r vpc_id vpc_cidr <<< "${vpcs[0]}"
+          [[ "${vpc_cidr}" == "10.42.0.0/16" ]] || fail "Expected VPC CIDR 10.42.0.0/16; found ${vpc_cidr}."
 
-      - name: Reject subnet read access
+          mapfile -t subnets < <(aws ec2 describe-subnets \
+            --region eu-north-1 \
+            --filters \
+              Name=vpc-id,Values="${vpc_id}" \
+              Name=tag:Project,Values=platform-engineering-lab \
+            --query 'Subnets[].[Tags[?Key==`Name`]|[0].Value,CidrBlock,MapPublicIpOnLaunch]' \
+            --output text)
+
+          [[ ${#subnets[@]} -eq 4 ]] || fail "Expected exactly four project subnets; found ${#subnets[@]}."
+
+          declare -A expected_subnets=(
+            [platform-engineering-lab-edge-a]=10.42.0.0/24
+            [platform-engineering-lab-edge-b]=10.42.1.0/24
+            [platform-engineering-lab-workload-a]=10.42.10.0/24
+            [platform-engineering-lab-workload-b]=10.42.11.0/24
+          )
+
+          for subnet in "${subnets[@]}"; do
+            read -r subnet_name subnet_cidr public_ip <<< "${subnet}"
+            [[ -n "${expected_subnets[${subnet_name}]+present}" ]] || fail "Found unexpected or duplicate project subnet ${subnet_name}."
+            [[ "${subnet_cidr}" == "${expected_subnets[${subnet_name}]}" ]] || fail "Subnet ${subnet_name} has unexpected CIDR ${subnet_cidr}."
+            [[ "${public_ip}" == "False" ]] || fail "Subnet ${subnet_name} has public-IP auto-assignment enabled."
+            unset 'expected_subnets['"${subnet_name}"']'
+          done
+
+          [[ ${#expected_subnets[@]} -eq 0 ]] || fail "One or more expected project subnets are missing."
+
+          mapfile -t internet_gateways < <(aws ec2 describe-internet-gateways \
+            --region eu-north-1 \
+            --filters \
+              Name=attachment.vpc-id,Values="${vpc_id}" \
+              Name=tag:Project,Values=platform-engineering-lab \
+            --query 'InternetGateways[].[InternetGatewayId]' \
+            --output text)
+
+          [[ ${#internet_gateways[@]} -eq 1 ]] || fail "Expected exactly one project internet gateway attached to the VPC; found ${#internet_gateways[@]}."
+          internet_gateway_id="${internet_gateways[0]}"
+
+          mapfile -t edge_route_tables < <(aws ec2 describe-route-tables \
+            --region eu-north-1 \
+            --filters \
+              Name=vpc-id,Values="${vpc_id}" \
+              Name=tag:Project,Values=platform-engineering-lab \
+              Name=tag:Tier,Values=edge \
+            --query 'RouteTables[].[RouteTableId]' \
+            --output text)
+
+          [[ ${#edge_route_tables[@]} -eq 1 ]] || fail "Expected exactly one project edge route table; found ${#edge_route_tables[@]}."
+
+          mapfile -t edge_routes < <(aws ec2 describe-route-tables \
+            --region eu-north-1 \
+            --route-table-ids "${edge_route_tables[0]}" \
+            --query 'RouteTables[0].Routes[].[DestinationCidrBlock,GatewayId]' \
+            --output text)
+
+          edge_local_routes=0
+          edge_default_routes=0
+          for route in "${edge_routes[@]}"; do
+            read -r destination gateway_id <<< "${route}"
+            [[ "${destination}" == "10.42.0.0/16" && "${gateway_id}" == "local" ]] && ((edge_local_routes += 1))
+            [[ "${destination}" == "0.0.0.0/0" && "${gateway_id}" == "${internet_gateway_id}" ]] && ((edge_default_routes += 1))
+          done
+
+          [[ ${edge_local_routes} -eq 1 ]] || fail "Expected the edge route table to contain the VPC local route."
+          [[ ${edge_default_routes} -eq 1 ]] || fail "Expected the edge route table to contain one default route through the project internet gateway."
+
+          mapfile -t workload_route_tables < <(aws ec2 describe-route-tables \
+            --region eu-north-1 \
+            --filters \
+              Name=vpc-id,Values="${vpc_id}" \
+              Name=tag:Project,Values=platform-engineering-lab \
+              Name=tag:Tier,Values=workload \
+            --query 'RouteTables[].[RouteTableId]' \
+            --output text)
+
+          [[ ${#workload_route_tables[@]} -eq 1 ]] || fail "Expected exactly one project workload route table; found ${#workload_route_tables[@]}."
+
+          mapfile -t workload_routes < <(aws ec2 describe-route-tables \
+            --region eu-north-1 \
+            --route-table-ids "${workload_route_tables[0]}" \
+            --query 'RouteTables[0].Routes[].[DestinationCidrBlock,GatewayId]' \
+            --output text)
+
+          workload_local_routes=0
+          workload_default_routes=0
+          for route in "${workload_routes[@]}"; do
+            read -r destination gateway_id <<< "${route}"
+            [[ "${destination}" == "10.42.0.0/16" && "${gateway_id}" == "local" ]] && ((workload_local_routes += 1))
+            [[ "${destination}" == "0.0.0.0/0" ]] && ((workload_default_routes += 1))
+          done
+
+          [[ ${workload_local_routes} -eq 1 ]] || fail "Expected the workload route table to contain the VPC local route."
+          [[ ${workload_default_routes} -eq 0 ]] || fail "The workload route table must not contain an internet default route."
+
+      - name: Reject security group read access
         run: |
           set +e
-          error_output="$(aws ec2 describe-subnets \
+          error_output="$(aws ec2 describe-security-groups \
             --region eu-north-1 \
             --dry-run 2>&1)"
           exit_status=$?
           set -e
 
           if (( exit_status == 0 )); then
-            echo "DescribeSubnets unexpectedly succeeded." >&2
+            echo "DescribeSecurityGroups unexpectedly succeeded." >&2
             exit 1
           fi
 
           if [[ "${error_output}" != *"UnauthorizedOperation"* ]]; then
-            echo "Expected UnauthorizedOperation from DescribeSubnets; received:" >&2
+            echo "Expected UnauthorizedOperation from DescribeSecurityGroups; received:" >&2
             echo "${error_output}" >&2
             exit 1
           fi
