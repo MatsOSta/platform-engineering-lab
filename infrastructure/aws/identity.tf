@@ -53,3 +53,27 @@ resource "aws_iam_role" "github_actions_identity" {
     ManagedBy   = "OpenTofu"
   }
 }
+
+data "aws_iam_policy_document" "github_actions_vpc_read" {
+  statement {
+    actions = [
+      "ec2:DescribeVpcs",
+    ]
+
+    resources = ["*"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestedRegion"
+      values = [
+        "eu-north-1",
+      ]
+    }
+  }
+}
+
+resource "aws_iam_role_policy" "github_actions_vpc_read" {
+  name   = "platform-engineering-lab-github-vpc-read"
+  role   = aws_iam_role.github_actions_identity.id
+  policy = data.aws_iam_policy_document.github_actions_vpc_read.json
+}

@@ -22,3 +22,56 @@ jobs:
 
       - name: Verify AWS identity
         run: aws sts get-caller-identity
+
+      - name: Verify lab VPC read access
+        run: |
+          vpc_count="$(aws ec2 describe-vpcs \
+            --region eu-north-1 \
+            --filters Name=tag:Project,Values=platform-engineering-lab \
+            --query 'length(Vpcs)' \
+            --output text)"
+
+          if [[ ! "${vpc_count}" =~ ^[0-9]+$ ]] || (( vpc_count < 1 )); then
+            echo "Expected at least one visible platform-engineering-lab VPC; found ${vpc_count}." >&2
+            exit 1
+          fi
+
+      - name: Reject subnet read access
+        run: |
+          set +e
+          error_output="$(aws ec2 describe-subnets \
+            --region eu-north-1 \
+            --dry-run 2>&1)"
+          exit_status=$?
+          set -e
+
+          if (( exit_status == 0 )); then
+            echo "DescribeSubnets unexpectedly succeeded." >&2
+            exit 1
+          fi
+
+          if [[ "${error_output}" != *"UnauthorizedOperation"* ]]; then
+            echo "Expected UnauthorizedOperation from DescribeSubnets; received:" >&2
+            echo "${error_output}" >&2
+            exit 1
+          fi
+
+      - name: Reject VPC read access outside the lab region
+        run: |
+          set +e
+          error_output="$(aws ec2 describe-vpcs \
+            --region eu-west-1 \
+            --dry-run 2>&1)"
+          exit_status=$?
+          set -e
+
+          if (( exit_status == 0 )); then
+            echo "DescribeVpcs unexpectedly succeeded in eu-west-1." >&2
+            exit 1
+          fi
+
+          if [[ "${error_output}" != *"UnauthorizedOperation"* ]]; then
+            echo "Expected UnauthorizedOperation from DescribeVpcs in eu-west-1; received:" >&2
+            echo "${error_output}" >&2
+            exit 1
+          fi
