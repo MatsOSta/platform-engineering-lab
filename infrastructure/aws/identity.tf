@@ -54,9 +54,12 @@ resource "aws_iam_role" "github_actions_identity" {
   }
 }
 
-data "aws_iam_policy_document" "github_actions_vpc_read" {
+data "aws_iam_policy_document" "github_actions_network_inventory_read" {
   statement {
     actions = [
+      "ec2:DescribeInternetGateways",
+      "ec2:DescribeRouteTables",
+      "ec2:DescribeSubnets",
       "ec2:DescribeVpcs",
     ]
 
@@ -72,8 +75,8 @@ data "aws_iam_policy_document" "github_actions_vpc_read" {
   }
 }
 
-resource "aws_iam_role_policy" "github_actions_vpc_read" {
-  name   = "platform-engineering-lab-github-vpc-read"
+resource "aws_iam_role_policy" "github_actions_network_inventory_read" {
+  name   = "platform-engineering-lab-github-network-inventory-read"
   role   = aws_iam_role.github_actions_identity.id
-  policy = data.aws_iam_policy_document.github_actions_vpc_read.json
+  policy = data.aws_iam_policy_document.github_actions_network_inventory_read.json
 }
