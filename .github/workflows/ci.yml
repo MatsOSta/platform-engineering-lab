@@ -93,7 +93,7 @@ jobs:
         working-directory: infrastructure/aws
 
       - name: Initialize AWS OpenTofu
-        run: tofu init
+        run: tofu init -backend=false -input=false
         working-directory: infrastructure/aws
 
       - name: Validate AWS OpenTofu configuration

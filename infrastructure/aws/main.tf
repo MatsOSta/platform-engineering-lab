@@ -1,6 +1,14 @@
 terraform {
   required_version = ">= 1.11, < 2.0"
 
+  backend "s3" {
+    bucket       = "platform-engineering-lab-tofu-state-450895596262-eu-north-1"
+    key          = "aws/terraform.tfstate"
+    region       = "eu-north-1"
+    encrypt      = true
+    use_lockfile = true
+  }
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -10,8 +18,7 @@ terraform {
 }
 
 provider "aws" {
-  profile = "platform-lab"
-  region  = "eu-north-1"
+  region = "eu-north-1"
 }
 
 data "aws_caller_identity" "current" {}

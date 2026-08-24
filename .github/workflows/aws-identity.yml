@@ -6,6 +6,7 @@ on:
       - master
 
 permissions:
+  contents: read
   id-token: write
 
 jobs:
@@ -13,6 +14,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6.2.3
         with:
@@ -173,3 +179,21 @@ jobs:
             echo "${error_output}" >&2
             exit 1
           fi
+
+      - name: Install OpenTofu
+        uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
+        with:
+          tofu_version: 1.12.5
+          tofu_wrapper: false
+
+      - name: Initialize AWS OpenTofu
+        run: tofu init -input=false
+        working-directory: infrastructure/aws
+
+      - name: Plan AWS OpenTofu
+        run: |
+          tofu plan \
+            -input=false \
+            -lock-timeout=60s \
+            -detailed-exitcode
+        working-directory: infrastructure/aws

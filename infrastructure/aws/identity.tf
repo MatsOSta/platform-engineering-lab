@@ -80,3 +80,43 @@ resource "aws_iam_role_policy" "github_actions_network_inventory_read" {
   role   = aws_iam_role.github_actions_identity.id
   policy = data.aws_iam_policy_document.github_actions_network_inventory_read.json
 }
+
+data "aws_iam_policy_document" "github_actions_tofu_backend_access" {
+  statement {
+    actions = [
+      "s3:ListBucket",
+    ]
+
+    resources = [
+      "arn:aws:s3:::platform-engineering-lab-tofu-state-450895596262-eu-north-1",
+    ]
+  }
+
+  statement {
+    actions = [
+      "s3:GetObject",
+    ]
+
+    resources = [
+      "arn:aws:s3:::platform-engineering-lab-tofu-state-450895596262-eu-north-1/aws/terraform.tfstate",
+    ]
+  }
+
+  statement {
+    actions = [
+      "s3:DeleteObject",
+      "s3:GetObject",
+      "s3:PutObject",
+    ]
+
+    resources = [
+      "arn:aws:s3:::platform-engineering-lab-tofu-state-450895596262-eu-north-1/aws/terraform.tfstate.tflock",
+    ]
+  }
+}
+
+resource "aws_iam_role_policy" "github_actions_tofu_backend_access" {
+  name   = "platform-engineering-lab-github-tofu-backend-access"
+  role   = aws_iam_role.github_actions_identity.id
+  policy = data.aws_iam_policy_document.github_actions_tofu_backend_access.json
+}
