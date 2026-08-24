@@ -18,8 +18,7 @@ terraform {
 }
 
 provider "aws" {
-  profile = "platform-lab"
-  region  = "eu-north-1"
+  region = "eu-north-1"
 }
 
 data "aws_caller_identity" "current" {}
