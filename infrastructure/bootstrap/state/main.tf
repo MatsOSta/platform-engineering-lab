@@ -43,6 +43,8 @@ resource "aws_s3_bucket_versioning" "tofu_state" {
   }
 }
 
+# SSE-S3 is deliberate for this low-cost lab; revisit customer-managed KMS if requirements justify it.
+#trivy:ignore:AWS-0132:exp:2027-02-24
 resource "aws_s3_bucket_server_side_encryption_configuration" "tofu_state" {
   bucket = aws_s3_bucket.tofu_state.id
 
