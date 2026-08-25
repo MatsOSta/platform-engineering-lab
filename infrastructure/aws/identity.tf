@@ -148,6 +148,7 @@ data "aws_iam_policy_document" "github_actions_tofu_plan_refresh_read" {
   statement {
     actions = [
       "ec2:DescribeAvailabilityZones",
+      "ec2:DescribeInstanceCreditSpecifications",
       "ec2:DescribeInstanceTypes",
       "ec2:DescribeInstances",
       "ec2:DescribeSecurityGroups",
