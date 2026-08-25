@@ -100,6 +100,17 @@ data "aws_iam_policy_document" "github_actions_tofu_plan_refresh_read" {
 
     resources = [
       aws_iam_role.agent_host.arn,
+      aws_iam_role.github_actions_identity.arn,
+    ]
+  }
+
+  statement {
+    actions = [
+      "iam:ListAttachedRolePolicies",
+    ]
+
+    resources = [
+      aws_iam_role.agent_host.arn,
     ]
   }
 
