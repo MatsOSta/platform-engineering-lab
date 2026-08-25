@@ -1,3 +1,5 @@
+# Public HTTPS egress is temporarily required for SSM/bootstrap and must be revisited when Hermes sandbox egress isolation is implemented.
+#trivy:ignore:AWS-0104:exp:2026-10-01
 resource "aws_security_group" "agent_host" {
   name        = "platform-engineering-lab-agent-host"
   description = "Outbound HTTPS access for the Hermes agent host"
