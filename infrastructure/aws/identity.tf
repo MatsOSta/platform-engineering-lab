@@ -84,6 +84,26 @@ resource "aws_iam_role_policy" "github_actions_network_inventory_read" {
 data "aws_iam_policy_document" "github_actions_tofu_plan_refresh_read" {
   statement {
     actions = [
+      "iam:GetInstanceProfile",
+    ]
+
+    resources = [
+      aws_iam_instance_profile.agent_host.arn,
+    ]
+  }
+
+  statement {
+    actions = [
+      "iam:GetRolePolicy",
+    ]
+
+    resources = [
+      aws_iam_role.github_actions_identity.arn,
+    ]
+  }
+
+  statement {
+    actions = [
       "iam:GetRole",
     ]
 
