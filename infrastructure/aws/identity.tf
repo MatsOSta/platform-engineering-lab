@@ -167,6 +167,24 @@ data "aws_iam_policy_document" "github_actions_tofu_plan_refresh_read" {
 
   statement {
     actions = [
+      "ec2:DescribeInstanceAttribute",
+    ]
+
+    resources = [
+      aws_instance.agent_host.arn,
+    ]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestedRegion"
+      values = [
+        "eu-north-1",
+      ]
+    }
+  }
+
+  statement {
+    actions = [
       "ec2:DescribeVpcAttribute",
     ]
 
