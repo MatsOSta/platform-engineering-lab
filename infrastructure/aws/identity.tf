@@ -131,6 +131,7 @@ data "aws_iam_policy_document" "github_actions_tofu_plan_refresh_read" {
 
     resources = [
       aws_iam_role.agent_host.arn,
+      aws_iam_role.github_actions_identity.arn,
     ]
   }
 
@@ -147,6 +148,7 @@ data "aws_iam_policy_document" "github_actions_tofu_plan_refresh_read" {
   statement {
     actions = [
       "ec2:DescribeAvailabilityZones",
+      "ec2:DescribeInstances",
       "ec2:DescribeSecurityGroups",
     ]
 
