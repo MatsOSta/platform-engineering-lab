@@ -151,6 +151,7 @@ data "aws_iam_policy_document" "github_actions_tofu_plan_refresh_read" {
       "ec2:DescribeInstanceTypes",
       "ec2:DescribeInstances",
       "ec2:DescribeSecurityGroups",
+      "ec2:DescribeTags",
     ]
 
     resources = ["*"]
