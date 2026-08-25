@@ -81,6 +81,68 @@ resource "aws_iam_role_policy" "github_actions_network_inventory_read" {
   policy = data.aws_iam_policy_document.github_actions_network_inventory_read.json
 }
 
+data "aws_iam_policy_document" "github_actions_tofu_plan_refresh_read" {
+  statement {
+    actions = [
+      "iam:GetRole",
+    ]
+
+    resources = [
+      aws_iam_role.agent_host.arn,
+    ]
+  }
+
+  statement {
+    actions = [
+      "iam:GetOpenIDConnectProvider",
+    ]
+
+    resources = [
+      aws_iam_openid_connect_provider.github_actions.arn,
+    ]
+  }
+
+  statement {
+    actions = [
+      "ec2:DescribeAvailabilityZones",
+    ]
+
+    resources = ["*"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestedRegion"
+      values = [
+        "eu-north-1",
+      ]
+    }
+  }
+
+  statement {
+    actions = [
+      "ec2:DescribeVpcAttribute",
+    ]
+
+    resources = [
+      aws_vpc.platform_lab.arn,
+    ]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestedRegion"
+      values = [
+        "eu-north-1",
+      ]
+    }
+  }
+}
+
+resource "aws_iam_role_policy" "github_actions_tofu_plan_refresh_read" {
+  name   = "platform-engineering-lab-github-tofu-plan-refresh-read"
+  role   = aws_iam_role.github_actions_identity.id
+  policy = data.aws_iam_policy_document.github_actions_tofu_plan_refresh_read.json
+}
+
 data "aws_iam_policy_document" "github_actions_tofu_backend_access" {
   statement {
     actions = [

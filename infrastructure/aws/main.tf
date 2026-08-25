@@ -166,8 +166,3 @@ output "aws_account_id" {
   description = "AWS account ID for the authenticated caller."
   value       = data.aws_caller_identity.current.account_id
 }
-
-output "caller_arn" {
-  description = "ARN of the authenticated AWS caller."
-  value       = data.aws_caller_identity.current.arn
-}
