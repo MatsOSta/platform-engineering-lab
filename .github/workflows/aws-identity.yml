@@ -140,22 +140,46 @@ jobs:
           [[ ${workload_local_routes} -eq 1 ]] || fail "Expected the workload route table to contain the VPC local route."
           [[ ${workload_default_routes} -eq 0 ]] || fail "The workload route table must not contain an internet default route."
 
-      - name: Reject security group read access
+      - name: Reject security group write access
         run: |
-          set +e
-          error_output="$(aws ec2 describe-security-groups \
+          fail() {
+            echo "$1" >&2
+            exit 1
+          }
+
+          mapfile -t security_groups < <(aws ec2 describe-security-groups \
             --region eu-north-1 \
+            --filters \
+              Name=tag:Name,Values=platform-engineering-lab-agent-host \
+              Name=tag:Project,Values=platform-engineering-lab \
+            --query 'SecurityGroups[].[GroupId]' \
+            --output text)
+
+          [[ ${#security_groups[@]} -eq 1 ]] || fail "Expected exactly one Hermes agent host security group; found ${#security_groups[@]}."
+
+          set +e
+          error_output="$(aws ec2 authorize-security-group-ingress \
+            --region eu-north-1 \
+            --group-id "${security_groups[0]}" \
+            --protocol tcp \
+            --port 22 \
+            --cidr 0.0.0.0/0 \
             --dry-run 2>&1)"
           exit_status=$?
           set -e
 
           if (( exit_status == 0 )); then
-            echo "DescribeSecurityGroups unexpectedly succeeded." >&2
+            echo "AuthorizeSecurityGroupIngress DryRun unexpectedly succeeded without a DryRunOperation response." >&2
+            exit 1
+          fi
+
+          if [[ "${error_output}" == *"DryRunOperation"* ]]; then
+            echo "AuthorizeSecurityGroupIngress returned DryRunOperation; the GitHub CI role has security group write permission." >&2
             exit 1
           fi
 
           if [[ "${error_output}" != *"UnauthorizedOperation"* ]]; then
-            echo "Expected UnauthorizedOperation from DescribeSecurityGroups; received:" >&2
+            echo "Expected UnauthorizedOperation from AuthorizeSecurityGroupIngress; received:" >&2
             echo "${error_output}" >&2
             exit 1
           fi
