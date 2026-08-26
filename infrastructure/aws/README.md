@@ -75,6 +75,63 @@ Only the Hermes data directory is mounted. The Docker socket and host repository
 are not mounted, no ports are published, and host networking or extra container
 privileges are not enabled.
 
-This setup step does not deploy a persistent Hermes gateway or system service.
-Gateway/service deployment is a later stage. Sandbox and egress isolation also
-remain required security work before any meaningful autonomous execution.
+## Telegram main-agent gateway
+
+Telegram is the first interface for the Hermes main agent. Configure it
+interactively after the base Hermes setup:
+
+```sh
+sudo bash setup-hermes-gateway.sh
+```
+
+The gateway setup wrapper uses the same pinned image and persistent data mount
+to run `hermes setup gateway`. Telegram bot credentials, the allowed Telegram
+user ID, and the home-channel configuration remain only in `/var/lib/hermes`;
+they are not stored in this repository or printed by the wrapper.
+Reconfiguration requires the persistent `hermes-gateway` container to be
+stopped explicitly first; the setup wrapper refuses to modify the shared data
+while that container is running and never stops it automatically.
+
+In the tested Telegram tool baseline, `vision` is the only enabled main-agent
+capability. The wrapper does not enable it or any other tool. After interactive
+setup succeeds, it explicitly disables `terminal`, `file`, and `skills` for the
+Telegram platform. Those capabilities remain disabled until a deliberate
+execution sandbox architecture exists.
+
+Start the persistent gateway with:
+
+```sh
+sudo bash run-hermes-gateway.sh
+```
+
+For a new container, the runtime wrapper executes:
+
+```sh
+docker run -d \
+  --name hermes-gateway \
+  --restart unless-stopped \
+  --volume /var/lib/hermes:/opt/data \
+  nousresearch/hermes-agent@sha256:f5efd66dfdc0a434adf20af4030ac856eea6631405f7d44a827c6d7a76bf083e \
+  hermes gateway run
+```
+
+The Docker restart policy restores the container after daemon or host restarts,
+while Hermes' included s6 supervision manages the gateway process inside the
+container. No inbound ports are published or required for the current Telegram
+deployment.
+
+On rerun, the runtime wrapper does not trust the existing container based only
+on its image. Before reporting it as healthy or starting it, the wrapper also
+validates its privilege mode, network mode, restart policy, complete host bind
+mount list, other Docker mount mechanisms, added capabilities, port publishing,
+and configured command. Any mismatch requires explicit operator review and
+replacement; the wrapper does not modify the existing container.
+
+The `/opt/data` mount also persists the local Whisper and Hugging Face cache at
+`/opt/data/.cache`. `HF_TOKEN` is not required for the current transcription
+use case. The runtime mounts no Docker socket, repository, cloud credentials,
+or other host directory.
+
+Discord may later provide a structured multi-agent or control-room interface.
+Execution sandboxing and egress isolation remain future security work before
+enabling tools with host or command-execution capabilities.
