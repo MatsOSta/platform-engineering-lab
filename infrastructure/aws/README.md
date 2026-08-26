@@ -135,3 +135,33 @@ or other host directory.
 Discord may later provide a structured multi-agent or control-room interface.
 Execution sandboxing and egress isolation remain future security work before
 enabling tools with host or command-execution capabilities.
+
+## Main-agent identity and project context
+
+`hermes/SOUL.md` defines the durable global identity and interaction style for
+Hermes. The repository-root `.hermes.md` separately defines this project's
+operating instructions, including workflow, safety brakes, and the intended
+orchestration model. Keeping these concerns separate prevents project-specific
+architecture and temporary workflow state from becoming global personality.
+
+Install the reviewed global identity from a repository checkout with:
+
+```sh
+sudo bash infrastructure/aws/install-hermes-main-agent-context.sh
+```
+
+The installer atomically replaces only `/var/lib/hermes/SOUL.md` with mode
+`0644`. It does not touch `.env`, `auth.json`, `config.yaml`, Telegram
+configuration, or any other Hermes state, and it does not restart the gateway.
+Restart the gateway explicitly after installation so new sessions reliably
+load the changed identity:
+
+```sh
+sudo docker restart hermes-gateway
+```
+
+The current gateway mounts only `/var/lib/hermes`, not this repository.
+Therefore `.hermes.md` remains source-controlled project context primarily for
+the future repository-mounted worker or execution layer unless it is explicitly
+injected through a reviewed mechanism later. The installer intentionally does
+not copy `.hermes.md` into `/var/lib/hermes`.
